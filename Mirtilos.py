@@ -82,6 +82,7 @@ if st.session_state.get("login") or login_sucesso:
         else:
             return pd.DataFrame(columns=["Data", "Trabalhador", "Quilos", "Preço/kg", "Total"])
 
+
     def guardar_dados(df):
         df.to_csv(FICHEIRO, index=False)
 
@@ -102,16 +103,11 @@ if st.session_state.get("login") or login_sucesso:
 
     if submit and trabalhador and quilos > 0 and preco > 0:
         total = round(quilos * preco, 2)
-        nova_linha = pd.DataFrame([[data, trabalhador, round(quilos, 2), round(preco, 2), total]],
+        nova_linha = pd.DataFrame([[data, trabalhador, quilos, preco, total]],
                                   columns=["Data", "Trabalhador", "Quilos", "Preço/kg", "Total"])
         df = pd.concat([df, nova_linha], ignore_index=True)
         guardar_dados(df)
         st.success(f"Entrega registada: {trabalhador} - {quilos}kg - {total:.2f}€")
-
-    # Arredondar colunas
-    df["Quilos"] = df["Quilos"].round(2)
-    df["Preço/kg"] = df["Preço/kg"].round(2)
-    df["Total"] = df["Total"].round(2)
 
     st.markdown("---")
     st.markdown("### 📋 Registos de Entregas")
@@ -119,25 +115,20 @@ if st.session_state.get("login") or login_sucesso:
 
     st.markdown("### 📊 Totais por Trabalhador")
     if not df.empty:
-        resumo = df.groupby("Trabalhador")[["Quilos", "Total"]].sum().reset_index()
-        resumo["Quilos"] = resumo["Quilos"].round(2)
-        resumo["Total"] = resumo["Total"].round(2)
-        st.dataframe(resumo)
+        totais = df.groupby("Trabalhador")["Total"].sum().reset_index()
+        st.table(totais)
 
     col_a, col_b = st.columns(2)
     with col_a:
-        st.download_button(
-            "⬇️ Download CSV",
-            df.to_csv(index=False, sep=';', encoding="utf-8-sig"),
-            file_name=f"entregas_{username}.csv"
-        )
-
+        st.download_button("⬇️ Download CSV", df.to_csv(index=False), file_name=f"entregas_{username}.csv")
     with col_b:
+        # Aqui a mudança
         if st.button("🗑️ Limpar Todos os Dados"):
-            if st.confirm("Tem a certeza que quer eliminar todos os dados? Esta ação é irreversível."):
+            if st.button("Tem certeza que quer eliminar todos os dados? Esta ação é irreversível."):
                 os.remove(FICHEIRO)
                 st.success("Dados eliminados com sucesso.")
                 st.experimental_rerun()
+
 else:
     st.info("Faça login para aceder à aplicação.")
 

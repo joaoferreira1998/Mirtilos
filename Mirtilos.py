@@ -84,7 +84,11 @@ if st.session_state.get("login") or login_sucesso:
 
 
     def guardar_dados(df):
-        df.to_csv(FICHEIRO, index=False)
+        df["Quilos"] = df["Quilos"].round(2)
+        df["Preço/kg"] = df["Preço/kg"].round(2)
+        df["Total"] = df["Total"].round(2)
+        df.to_csv(FICHEIRO, index=False, encoding='utf-8-sig')
+
 
     st.markdown(f"<h1 style='text-align: center; color: #4B8BBE;'>📦 Entregas de Mirtilos</h1>", unsafe_allow_html=True)
 
@@ -120,7 +124,8 @@ if st.session_state.get("login") or login_sucesso:
 
     col_a, col_b = st.columns(2)
     with col_a:
-        st.download_button("⬇️ Download CSV", df.to_csv(index=False), file_name=f"entregas_{username}.csv")
+        st.download_button("⬇️ Download CSV", df.to_csv(index=False, encoding='utf-8-sig'),
+                           file_name=f"entregas_{username}.csv")
     with col_b:
         if st.button("🗑️ Limpar Todos os Dados"):
             if st.confirm("Tem a certeza que quer eliminar todos os dados? Esta ação é irreversível."):
@@ -130,3 +135,4 @@ if st.session_state.get("login") or login_sucesso:
 
 else:
     st.info("Faça login para aceder à aplicação.")
+

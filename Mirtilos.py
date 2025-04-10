@@ -122,13 +122,20 @@ if st.session_state.get("login") or login_sucesso:
     with col_a:
         st.download_button("⬇️ Download CSV", df.to_csv(index=False), file_name=f"entregas_{username}.csv")
     with col_b:
-        # Aqui a mudança
-        if st.button("🗑️ Limpar Todos os Dados"):
-            if st.button("Tem certeza que quer eliminar todos os dados? Esta ação é irreversível."):
-                os.remove(FICHEIRO)
-                st.success("Dados eliminados com sucesso.")
-                st.experimental_rerun()
+        # Botão de confirmação para limpar dados
+        confirm = st.button("🗑️ Limpar Todos os Dados")
+        if confirm:
+            resposta = st.radio("Tem certeza que quer eliminar todos os dados? Esta ação é irreversível.",
+                                ["Sim", "Não"])
+            if resposta == "Sim":
+                try:
+                    os.remove(FICHEIRO)
+                    st.success("Dados eliminados com sucesso.")
+                    st.experimental_rerun()  # Recarrega a página após eliminar os dados
+                except Exception as e:
+                    st.error(f"Erro ao tentar eliminar os dados: {e}")
+            else:
+                st.info("Operação cancelada.")
 
 else:
     st.info("Faça login para aceder à aplicação.")
-

@@ -138,6 +138,80 @@ if st.session_state.get("login") or login_sucesso:
                 os.remove(FICHEIRO)
                 st.success("Dados eliminados com sucesso.")
                 st.experimental_rerun()
+
+# Adiciona isto ao final do teu ficheiro principal, depois da 
+# "if not df.empty:" que mostra os totais por trabalhador.
+
+from fpdf import FPDF
+import tempfile
+
+st.markdown("### 🧾 Gerar Relatórios em PDF")
+
+# Formatação dos dados
+resumo = df.groupby("Trabalhador")[["Quilos", "Total"]].sum().reset_index()
+df[["Quilos", "Preço/kg", "Total"]] = df[["Quilos", "Preço/kg", "Total"]].round(2)
+resumo[["Quilos", "Total"]] = resumo[["Quilos", "Total"]].round(2)
+
+# Função para gerar PDF
+def gerar_pdf_tabela(titulo, dados, colunas, nome_ficheiro):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(200, 10, titulo, ln=True, align="C")
+    pdf.ln(10)
+    pdf.set_font("Arial", "B", 12)
+
+    # Cabeçalho
+    for col in colunas:
+        pdf.cell(40, 10, col, border=1)
+    pdf.ln()
+
+    # Dados
+    pdf.set_font("Arial", "", 12)
+    for i, row in dados.iterrows():
+        for item in row:
+            pdf.cell(40, 10, str(item), border=1)
+        pdf.ln()
+
+    # Guardar PDF temporariamente
+    tmp_path = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf.output(tmp_path.name)
+    return tmp_path.name
+
+# Botão para PDF geral
+if st.button("📄 Gerar Relatório Geral (PDF)"):
+    path_pdf = gerar_pdf_tabela(
+        "Relatório Geral de Entregas",
+        resumo,
+        ["Trabalhador", "Quilos", "Total (€)"],
+        "relatorio_geral.pdf"
+    )
+    with open(path_pdf, "rb") as f:
+        st.download_button(
+            label="⬇️ Download Relatório Geral",
+            data=f,
+            file_name="relatorio_geral.pdf",
+            mime="application/pdf"
+        )
+
+# PDF por colaborador
+colaborador_select = st.selectbox("👤 Selecionar colaborador para PDF", df["Trabalhador"].unique())
+if st.button("📄 Gerar PDF do Colaborador"):
+    df_user = df[df["Trabalhador"] == colaborador_select]
+    path_pdf_user = gerar_pdf_tabela(
+        f"Entregas de {colaborador_select}",
+        df_user[["Data", "Quilos", "Preço/kg", "Total"]],
+        ["Data", "Quilos", "Preço/kg", "Total (€)"],
+        f"{colaborador_select}_entregas.pdf"
+    )
+    with open(path_pdf_user, "rb") as f:
+        st.download_button(
+            label=f"⬇️ Download PDF de {colaborador_select}",
+            data=f,
+            file_name=f"{colaborador_select}_entregas.pdf",
+            mime="application/pdf"
+        )
+
 else:
     st.info("Faça login para aceder à aplicação.")
 

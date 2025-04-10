@@ -3,8 +3,6 @@ import pandas as pd
 import hashlib
 from datetime import date
 import os
-from io import BytesIO
-from fpdf import FPDF
 
 st.set_page_config(page_title="Gestão de Entregas", layout="centered")
 
@@ -104,77 +102,42 @@ if st.session_state.get("login") or login_sucesso:
 
     if submit and trabalhador and quilos > 0 and preco > 0:
         total = round(quilos * preco, 2)
-        nova_linha = pd.DataFrame([[data, trabalhador, quilos, preco, total]],
+        nova_linha = pd.DataFrame([[data, trabalhador, round(quilos, 2), round(preco, 2), total]],
                                   columns=["Data", "Trabalhador", "Quilos", "Preço/kg", "Total"])
         df = pd.concat([df, nova_linha], ignore_index=True)
         guardar_dados(df)
         st.success(f"Entrega registada: {trabalhador} - {quilos}kg - {total:.2f}€")
 
-    st.markdown("---")
-    st.markdown("### 📋 Registos de Entregas")
+    # Arredondar colunas
     df["Quilos"] = df["Quilos"].round(2)
     df["Preço/kg"] = df["Preço/kg"].round(2)
     df["Total"] = df["Total"].round(2)
+
+    st.markdown("---")
+    st.markdown("### 📋 Registos de Entregas")
     st.dataframe(df, use_container_width=True)
 
     st.markdown("### 📊 Totais por Trabalhador")
     if not df.empty:
-        totais = df.groupby("Trabalhador")[["Quilos", "Total"]].sum().reset_index()
-        st.table(totais)
+        resumo = df.groupby("Trabalhador")[["Quilos", "Total"]].sum().reset_index()
+        resumo["Quilos"] = resumo["Quilos"].round(2)
+        resumo["Total"] = resumo["Total"].round(2)
+        st.dataframe(resumo)
 
     col_a, col_b = st.columns(2)
     with col_a:
-        st.download_button("⬇️ Download CSV", df.to_csv(index=False), file_name=f"entregas_{username}.csv")
+        st.download_button(
+            "⬇️ Download CSV",
+            df.to_csv(index=False, sep=';', encoding="utf-8-sig"),
+            file_name=f"entregas_{username}.csv"
+        )
+
     with col_b:
         if st.button("🗑️ Limpar Todos os Dados"):
             if st.confirm("Tem a certeza que quer eliminar todos os dados? Esta ação é irreversível."):
                 os.remove(FICHEIRO)
                 st.success("Dados eliminados com sucesso.")
                 st.experimental_rerun()
-
-    # Função para gerar PDF
-    def gerar_pdf(df, username):
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        
-        pdf.cell(200, 10, txt="Relatório de Entregas de Mirtilos", ln=True, align='C')
-        pdf.ln(10)
-
-        # Tabela de dados
-        pdf.cell(40, 10, "Data", 1)
-        pdf.cell(50, 10, "Trabalhador", 1)
-        pdf.cell(40, 10, "Quilos", 1)
-        pdf.cell(40, 10, "Preço/kg (€)", 1)
-        pdf.cell(40, 10, "Total (€)", 1)
-        pdf.ln()
-
-        for index, row in df.iterrows():
-            pdf.cell(40, 10, str(row['Data']), 1)
-            pdf.cell(50, 10, row['Trabalhador'], 1)
-            pdf.cell(40, 10, str(row['Quilos']), 1)
-            pdf.cell(40, 10, str(row['Preço/kg']), 1)
-            pdf.cell(40, 10, str(row['Total']), 1)
-            pdf.ln()
-
-        return pdf
-
-    # Gerar relatório PDF
-    if st.button("📄 Gerar Relatório PDF para Colaborador"):
-        pdf = gerar_pdf(df, username)
-        buffer = BytesIO()
-        pdf.output(buffer)
-        buffer.seek(0)
-        st.download_button("⬇️ Baixar PDF", buffer, file_name=f"relatorio_{username}.pdf")
-
-    if st.button("📄 Gerar Relatório PDF Geral"):
-        pdf = gerar_pdf(df, "geral")
-        buffer = BytesIO()
-        pdf.output(buffer)
-        buffer.seek(0)
-        st.download_button("⬇️ Baixar PDF Geral", buffer, file_name="relatorio_geral.pdf")
-
 else:
     st.info("Faça login para aceder à aplicação.")
 
